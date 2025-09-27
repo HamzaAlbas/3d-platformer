@@ -27,7 +27,7 @@ public class PlayerController : MonoBehaviour
     }
     
     [Header("Debug")]
-    [SerializeField] private PlayerState currentState = PlayerState.Idle;
+    [SerializeField]private PlayerState currentState = PlayerState.Idle;
     
     private void Awake()
     {
@@ -67,7 +67,7 @@ public class PlayerController : MonoBehaviour
         }
 
         Vector3 movementDirection = GetCameraRelativeMovement();
-
+        
         controller.Move(movementDirection * moveSpeed * Time.deltaTime);
 
         lastMovementDirection = movementDirection.normalized;
