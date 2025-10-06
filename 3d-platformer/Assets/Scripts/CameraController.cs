@@ -49,24 +49,22 @@ public class CameraController : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (target == null) return;
-        
         Vector2 lookInput = lookAction.ReadValue<Vector2>();
 
         yaw += lookInput.x * sensitivity * Time.deltaTime;
         pitch -= lookInput.y * sensitivity * Time.deltaTime;
-
+        
         pitch = Mathf.Clamp(pitch, pitchMinMax.x, pitchMinMax.y);
         
         Quaternion desiredRotation = Quaternion.Euler(pitch, yaw, 0);
 
-        Vector3 direction = Vector3.forward;
-        Vector3 targetPosition = new Vector3(target.position.x, cameraHeight, target.position.z) -
-                                 (desiredRotation * direction * distance);
+        Vector3 focusPoint = target.position + Vector3.up * cameraHeight;
+
+        Vector3 desiredPosition = focusPoint - (desiredRotation * Vector3.forward * distance);
 
         transform.position =
-            Vector3.SmoothDamp(transform.position, targetPosition, ref currentVelocity, positionSmoothTime);
-
-        transform.rotation = desiredRotation;
+            Vector3.SmoothDamp(transform.position, desiredPosition, ref currentVelocity, positionSmoothTime);
+        
+        transform.LookAt(focusPoint);
     }
 }
