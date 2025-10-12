@@ -2,32 +2,37 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
+[RequireComponent(typeof(PlayerInput))]
 public class PlayerController : MonoBehaviour
 {
-    [Header("Movement")]
+    [Header("Movement Settings")]
+    [Tooltip("The speed at which the player moves horizontally.")]
     public float moveSpeed = 5f;
+    [Tooltip("How fast the player rotates to face the movement direction. Higher is faster.")]
+    public float rotationSmoothing = 15f;
+    [Tooltip("The transform of the camera that follows the player.")]
     public Transform cameraTransform;
-    public float rotationSpeed = 10f;
-    
-    [Header("Jump")]
-    public float jumpHeight = 2f;
-    public float gravity = -20f;
 
-    //Components
+    [Header("Jump & Gravity Settings")]
+    [Tooltip("The maximum height the player can jump.")]
+    public float jumpHeight = 2f;
+    [Tooltip("The strength of gravity.")]
+    public float gravity = -20f;
+    [Tooltip("A small downward force applied when grounded to prevent bouncing.")]
+    public float groundedGravity = -2f;
+
+    // Components
     private CharacterController controller;
     private PlayerInput playerInput;
 
-    //Input
+    // Input Actions
     private InputAction moveAction;
-    private Vector2 moveInput;
     private InputAction jumpAction;
+
+    // State & Movement Vectors
+    private Vector3 playerVelocity;
+    private Vector2 moveInput;
     
-    //Movement
-    private Vector3 lastMovementDirection;
-    private Vector3 velocity;
-    private bool isGrounded;
-    
-    //State Machine
     public enum PlayerState
     {
         Idle,
@@ -35,10 +40,10 @@ public class PlayerController : MonoBehaviour
         Jumping,
         Falling
     }
-    
+
     [Header("Debug")]
-    [SerializeField]private PlayerState currentState = PlayerState.Idle;
-    
+    [SerializeField] private PlayerState currentState;
+
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
@@ -62,177 +67,67 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        CheckGroundStatus();
-        HandleInput();
-        UpdateState();
-        HandleState();
-        ApplyGravity();
-    }
+        bool isGrounded = controller.isGrounded;
 
-    private void HandleInput()
-    {
-        moveInput = moveAction.ReadValue<Vector2>();
-    }
-
-    private void HandleMovement()
-    {
-        if (moveInput.magnitude < 0.1f)
+        if (isGrounded && playerVelocity.y < 0)
         {
-            return;
+            playerVelocity.y = groundedGravity;
         }
 
-        Vector3 movementDirection = GetCameraRelativeMovement();
+        moveInput = moveAction.ReadValue<Vector2>();
         
-        controller.Move(movementDirection * moveSpeed * Time.deltaTime);
+        Vector3 moveDirection = GetCameraRelativeMovement();
 
-        lastMovementDirection = movementDirection.normalized;
+        if (jumpAction.triggered && isGrounded)
+        {
+            playerVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+        }
+
+        if (moveInput.magnitude >= 0.1f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(moveDirection, Vector3.up);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSmoothing * Time.deltaTime);
+        }
+
+        playerVelocity.y += gravity * Time.deltaTime;
+        
+        CollisionFlags flags = controller.Move((moveDirection * moveSpeed + playerVelocity) * Time.deltaTime);
+
+        if ((flags & CollisionFlags.Above) != 0 && playerVelocity.y > 0)
+        {
+            playerVelocity.y = -1f;
+        }
+
+        UpdateStateEnum(isGrounded);
     }
 
     private Vector3 GetCameraRelativeMovement()
     {
-        if (cameraTransform == null)
+        if (moveInput.magnitude < 0.1f)
         {
-            return new Vector3(moveInput.x, 0f, moveInput.y);
+            return Vector3.zero;
         }
 
-        Vector3 cameraForward = cameraTransform.forward;
-        Vector3 cameraRight = cameraTransform.right;
+        Vector3 forward = cameraTransform.forward;
+        Vector3 right = cameraTransform.right;
 
-        cameraForward.y = 0f;
-        cameraRight.y = 0f;
-        cameraForward.Normalize();
-        cameraRight.Normalize();
-        
-        Vector3 movementDirection = cameraRight * moveInput.x + cameraForward * moveInput.y;
-        return movementDirection;
+        forward.y = 0;
+        right.y = 0;
+        forward.Normalize();
+        right.Normalize();
+
+        return (right * moveInput.x + forward * moveInput.y).normalized;
     }
 
-    private void HandleRotation()
+    private void UpdateStateEnum(bool isGrounded)
     {
-        if (lastMovementDirection == Vector3.zero)
+        if (isGrounded)
         {
-            return;
+            currentState = moveInput.magnitude >= 0.1f ? PlayerState.Moving : PlayerState.Idle;
         }
-        
-        Quaternion targetRotation = Quaternion.LookRotation(lastMovementDirection, Vector3.up);
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-    }
-
-    private void UpdateState()
-    {
-        switch (currentState)
+        else
         {
-            case PlayerState.Idle:
-                if (jumpAction.triggered && isGrounded)
-                {
-                    PerformJump();
-                    currentState = PlayerState.Jumping;
-                }
-                else if (!isGrounded && velocity.y < 0)
-                {
-                    currentState = PlayerState.Falling;
-                }
-                else if (moveInput.magnitude > 0.1f)
-                {
-                    currentState = PlayerState.Moving;
-                }
-                break;
-            
-            case PlayerState.Moving:
-                if (jumpAction.triggered && isGrounded)
-                {
-                    PerformJump();
-                    currentState = PlayerState.Jumping;
-                }
-                else if (!isGrounded && velocity.y < 0)
-                {
-                    currentState = PlayerState.Falling;
-                }
-                else if (moveInput.magnitude <= 0.1f)
-                {
-                    currentState = PlayerState.Idle;
-                }
-                break;
-            case PlayerState.Jumping:
-                if (velocity.y < 0)
-                {
-                    currentState = PlayerState.Falling;
-                }
-                break;
-            case PlayerState.Falling:
-                if (moveInput.magnitude > 0.1f)
-                {
-                    currentState = PlayerState.Moving;
-                }
-                else
-                {
-                    currentState = PlayerState.Idle;
-                }
-                break;
+            currentState = playerVelocity.y > 0 ? PlayerState.Jumping : PlayerState.Falling;
         }
-    }
-
-    private void HandleState()
-    {
-        switch (currentState)
-        {
-            case PlayerState.Idle:
-                HandleIdle();
-                break;
-            case PlayerState.Moving:
-                HandleMovement();
-                HandleRotation();
-                break;
-            case PlayerState.Jumping:
-                HandleJumping();
-                break;
-            case PlayerState.Falling:
-                HandleFalling();
-                break;
-        }
-    }
-
-    private void HandleIdle()
-    {
-        
-    }
-
-    private void HandleJumping()
-    {
-        if (moveInput.magnitude > 0.1f)
-        {
-            HandleMovement();
-            HandleRotation();
-        }
-    }
-
-    private void HandleFalling()
-    {
-        if (moveInput.magnitude > 0.1f)
-        {
-            HandleMovement();
-            HandleRotation();
-        }
-    }
-
-    private void CheckGroundStatus()
-    {
-        isGrounded = controller.isGrounded;
-
-        if (isGrounded && velocity.y < 0)
-        {
-            velocity.y = -2f;
-        }
-    }
-
-    private void ApplyGravity()
-    {
-        velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
-    }
-
-    private void PerformJump()
-    {
-        velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
     }
 }

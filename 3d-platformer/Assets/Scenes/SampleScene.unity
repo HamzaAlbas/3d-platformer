@@ -1079,10 +1079,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 5
+  rotationSmoothing: 15
   cameraTransform: {fileID: 330585546}
-  rotationSpeed: 10
   jumpHeight: 2
   gravity: -20
+  groundedGravity: -2
   currentState: 0
 --- !u!143 &1310104439
 CharacterController:
