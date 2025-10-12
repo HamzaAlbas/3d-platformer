@@ -27,6 +27,13 @@ public class PlayerController : MonoBehaviour
     public float airMomentumMultiplier = 0.8f;
     [Tooltip("How much control the player has to change direction mid-air. Higher is more responsive.")]
     public float airControl = 2.5f;
+    
+    // Animations
+    private Animator animator;
+    private readonly int speedHash = Animator.StringToHash("Speed");
+    private readonly int isGroundedHash = Animator.StringToHash("IsGrounded");
+    private readonly int isJumpingHash = Animator.StringToHash("IsJumping");
+    private readonly int isFallingHash = Animator.StringToHash("IsFalling");
 
     // Components
     private CharacterController controller;
@@ -58,6 +65,7 @@ public class PlayerController : MonoBehaviour
     {
         controller = GetComponent<CharacterController>();
         playerInput = GetComponent<PlayerInput>();
+        animator = GetComponent<Animator>();
 
         moveAction = playerInput.actions["Move"];
         sprintAction = playerInput.actions["Sprint"];
@@ -124,6 +132,7 @@ public class PlayerController : MonoBehaviour
             playerVelocity.y = -1f;
         }
 
+        HandleAnimation(isGrounded);
         UpdateStateEnum(isGrounded, sprintAction.IsPressed());
     }
 
@@ -162,5 +171,15 @@ public class PlayerController : MonoBehaviour
         {
             currentState = playerVelocity.y > 0 ? PlayerState.Jumping : PlayerState.Falling;
         }
+    }
+    
+    private void HandleAnimation(bool isGrounded)
+    {
+        float horizontalSpeed = new Vector2(horizontalVelocity.x, horizontalVelocity.z).magnitude;
+        
+        animator.SetFloat(speedHash, horizontalSpeed);
+        animator.SetBool(isGroundedHash, isGrounded);
+        animator.SetBool(isJumpingHash, currentState == PlayerState.Jumping);
+        animator.SetBool(isFallingHash, currentState == PlayerState.Falling);
     }
 }
