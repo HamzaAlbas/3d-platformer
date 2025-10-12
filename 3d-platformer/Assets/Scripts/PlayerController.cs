@@ -8,6 +8,8 @@ public class PlayerController : MonoBehaviour
     [Header("Movement Settings")]
     [Tooltip("The speed at which the player moves horizontally.")]
     public float moveSpeed = 5f;
+    [Tooltip("The speed at which the player moves when sprinting.")]
+    public float sprintSpeed = 8f;
     [Tooltip("How fast the player rotates to face the movement direction. Higher is faster.")]
     public float rotationSmoothing = 15f;
     [Tooltip("The transform of the camera that follows the player.")]
@@ -20,6 +22,11 @@ public class PlayerController : MonoBehaviour
     public float gravity = -20f;
     [Tooltip("A small downward force applied when grounded to prevent bouncing.")]
     public float groundedGravity = -2f;
+    [Tooltip("Controls how much ground momentum is carried into a jump. 1 = full momentum, 0.5 = half, etc.")]
+    [Range(0f, 2f)] 
+    public float airMomentumMultiplier = 0.8f;
+    [Tooltip("How much control the player has to change direction mid-air. Higher is more responsive.")]
+    public float airControl = 2.5f;
 
     // Components
     private CharacterController controller;
@@ -28,15 +35,18 @@ public class PlayerController : MonoBehaviour
     // Input Actions
     private InputAction moveAction;
     private InputAction jumpAction;
+    private InputAction sprintAction;
 
-    // State & Movement Vectors
+    // State & Movement 
     private Vector3 playerVelocity;
+    private Vector3 horizontalVelocity;
     private Vector2 moveInput;
     
     public enum PlayerState
     {
         Idle,
         Moving,
+        Sprinting,
         Jumping,
         Falling
     }
@@ -50,55 +60,71 @@ public class PlayerController : MonoBehaviour
         playerInput = GetComponent<PlayerInput>();
 
         moveAction = playerInput.actions["Move"];
+        sprintAction = playerInput.actions["Sprint"];
         jumpAction = playerInput.actions["Jump"];
     }
 
     private void OnEnable()
     {
         moveAction.Enable();
+        sprintAction.Enable();
         jumpAction.Enable();
     }
 
     private void OnDisable()
     {
         moveAction.Disable();
+        sprintAction.Disable();
         jumpAction.Disable();
     }
 
     private void Update()
     {
         bool isGrounded = controller.isGrounded;
-
-        if (isGrounded && playerVelocity.y < 0)
-        {
-            playerVelocity.y = groundedGravity;
-        }
-
         moveInput = moveAction.ReadValue<Vector2>();
-        
         Vector3 moveDirection = GetCameraRelativeMovement();
 
-        if (jumpAction.triggered && isGrounded)
+        if (isGrounded)
         {
-            playerVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            if (playerVelocity.y < 0)
+            {
+                playerVelocity.y = groundedGravity;
+            }
+
+            bool isSprinting = sprintAction.IsPressed();
+            float currentSpeed = isSprinting && moveInput.magnitude > 0.1f ? sprintSpeed : moveSpeed;
+            horizontalVelocity = moveDirection * currentSpeed;
+
+            if (jumpAction.triggered)
+            {
+                playerVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                horizontalVelocity *= airMomentumMultiplier;
+            }
         }
+        else 
+        {
+            Vector3 targetAirVelocity = moveDirection * moveSpeed;
+            
+
+            horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetAirVelocity, airControl * Time.deltaTime);
+        }
+        
+        playerVelocity.y += gravity * Time.deltaTime;
 
         if (moveInput.magnitude >= 0.1f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(moveDirection, Vector3.up);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSmoothing * Time.deltaTime);
         }
-
-        playerVelocity.y += gravity * Time.deltaTime;
         
-        CollisionFlags flags = controller.Move((moveDirection * moveSpeed + playerVelocity) * Time.deltaTime);
+        CollisionFlags flags = controller.Move((horizontalVelocity + playerVelocity) * Time.deltaTime);
 
         if ((flags & CollisionFlags.Above) != 0 && playerVelocity.y > 0)
         {
             playerVelocity.y = -1f;
         }
 
-        UpdateStateEnum(isGrounded);
+        UpdateStateEnum(isGrounded, sprintAction.IsPressed());
     }
 
     private Vector3 GetCameraRelativeMovement()
@@ -119,11 +145,18 @@ public class PlayerController : MonoBehaviour
         return (right * moveInput.x + forward * moveInput.y).normalized;
     }
 
-    private void UpdateStateEnum(bool isGrounded)
+    private void UpdateStateEnum(bool isGrounded, bool isSprinting)
     {
         if (isGrounded)
         {
-            currentState = moveInput.magnitude >= 0.1f ? PlayerState.Moving : PlayerState.Idle;
+            if (moveInput.magnitude >= 0.1f)
+            {
+                currentState = isSprinting ? PlayerState.Sprinting : PlayerState.Moving;
+            }
+            else
+            {
+                currentState = PlayerState.Idle;
+            }
         }
         else
         {
