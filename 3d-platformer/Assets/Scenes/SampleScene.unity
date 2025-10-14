@@ -784,6 +784,50 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1033507460}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1046122752
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1046122754}
+  - component: {fileID: 1046122753}
+  m_Layer: 0
+  m_Name: Player Effects Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1046122753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1046122752}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a072e174a7a27d34fa9ff4c45475f1a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerEffectsManager
+--- !u!4 &1046122754
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1046122752}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.01581, y: 0.57331, z: -0.6967}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1097035421
 GameObject:
   m_ObjectHideFlags: 0
@@ -1436,6 +1480,7 @@ GameObject:
   - component: {fileID: 846024198570994664}
   - component: {fileID: 846024198570994668}
   - component: {fileID: 846024198570994669}
+  - component: {fileID: 846024198570994670}
   - component: {fileID: 846024198570994667}
   - component: {fileID: 846024198570994666}
   - component: {fileID: 846024198570994665}
@@ -1811,6 +1856,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerFallChecker
   respawnPoint: {fileID: 1632602168}
   fallThreshold: -15
+--- !u!114 &846024198570994670
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 69381563821142354}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0df9467cefaee3143a9e5b64bc3cb8b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EventProxy
+  effectsManager: {fileID: 1046122753}
 --- !u!4 &850524307816471096
 Transform:
   m_ObjectHideFlags: 0
@@ -3099,3 +3157,4 @@ SceneRoots:
   - {fileID: 1097035422}
   - {fileID: 846024198570994664}
   - {fileID: 1632602168}
+  - {fileID: 1046122754}

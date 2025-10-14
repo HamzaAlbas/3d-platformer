@@ -1,11 +1,19 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System; 
 
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(PlayerInput))]
 public class PlayerController : MonoBehaviour
 {
+    public static PlayerController Instance { get; private set; }
+
+    public event Action<PlayerState, PlayerState> OnStateChange;
+    public event Action OnJump;
+    public event Action OnDoubleJump;
+    public event Action OnDash;
+    
     [Header("Movement Settings")]
     [Tooltip("The speed at which the player moves horizontally.")]
     public float moveSpeed = 5f;
@@ -56,13 +64,16 @@ public class PlayerController : MonoBehaviour
     private InputAction sprintAction;
     private InputAction dashAction;
 
-    // State & Movement 
+    // Private Variables 
     private Vector3 playerVelocity;
     private Vector3 horizontalVelocity;
     private Vector2 moveInput;
     private bool hasDoubleJumped = false; 
     private bool isDashing = false;
     private float dashCooldownTimer = 0f;
+    private PlayerState previousState;
+    [Header("Debug")]
+    [SerializeField] private PlayerState currentState;
     
     public enum PlayerState
     {
@@ -74,11 +85,15 @@ public class PlayerController : MonoBehaviour
         Dashing
     }
 
-    [Header("Debug")]
-    [SerializeField] private PlayerState currentState;
-
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+        
         controller = GetComponent<CharacterController>();
         playerInput = GetComponent<PlayerInput>();
         animator = GetComponent<Animator>();
@@ -136,6 +151,7 @@ private void Update()
                 {
                     playerVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
                     horizontalVelocity *= airMomentumMultiplier;
+                    OnJump?.Invoke();
                 }
             }
             else
@@ -145,6 +161,7 @@ private void Update()
                     hasDoubleJumped = true;
                     playerVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
                     animator.SetTrigger(doubleJumpHash);
+                    OnDoubleJump?.Invoke();
                 }
 
                 Vector3 targetAirVelocity = moveDirection * moveSpeed;
@@ -171,6 +188,7 @@ private void Update()
     
     private IEnumerator PerformDash(Vector3 moveDirection)
     {
+        OnDash?.Invoke();
         isDashing = true;
         dashCooldownTimer = dashCooldown;
         animator.SetTrigger(dashHash);
@@ -214,6 +232,8 @@ private void Update()
 
     private void UpdateStateEnum(bool isGrounded, bool isSprinting)
     {
+        previousState = currentState;
+        
         if (isDashing)
         {
             currentState = PlayerState.Dashing;
@@ -230,6 +250,11 @@ private void Update()
         else
         {
             currentState = playerVelocity.y > 0 ? PlayerState.Jumping : PlayerState.Falling;
+        }
+        
+        if (previousState != currentState)
+        {
+            OnStateChange?.Invoke(previousState, currentState);
         }
     }
     
