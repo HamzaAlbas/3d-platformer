@@ -207,7 +207,15 @@ public class PlayerController : MonoBehaviour
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSmoothing * Time.deltaTime);
     }
     
-    private void ApplyFinalMove() => controller.Move((horizontalVelocity + playerVelocity) * Time.deltaTime);
+    private void ApplyFinalMove()
+    {
+        CollisionFlags flags = controller.Move((horizontalVelocity + playerVelocity) * Time.deltaTime);
+
+        if ((flags & CollisionFlags.Above) != 0 && playerVelocity.y > 0)
+        {
+            playerVelocity.y = -1f;
+        }
+    }
 
     #endregion
 

@@ -1841,6 +1841,8 @@ MonoBehaviour:
   dashPower: 20
   dashDuration: 0.2
   dashCooldown: 1
+  canGroundPound: 1
+  groundPoundForce: -60
   currentState: 0
 --- !u!114 &846024198570994669
 MonoBehaviour:
