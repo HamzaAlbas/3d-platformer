@@ -5,6 +5,7 @@ public class PlayerEffectsManager : MonoBehaviour
     //[Header("Effect References")]
     //public ParticleSystem dashVFX;
     //public ParticleSystem doubleJumpVFX;
+    //public ParticleSystem groundPoundVFX;
     //public AudioSource audioSource;
 
     //[Header("Sound Clips")]
@@ -12,6 +13,7 @@ public class PlayerEffectsManager : MonoBehaviour
     //public AudioClip doubleJumpSound; 
     //public AudioClip dashSound;
     //public AudioClip landSound;
+    //public AudioClip groundPoundLandSound;
     
 
     private void Start()
@@ -21,6 +23,7 @@ public class PlayerEffectsManager : MonoBehaviour
         PlayerController.Instance.OnStateChange += HandleStateChange;
         PlayerController.Instance.OnDash += HandleDash;
         PlayerController.Instance.OnDoubleJump += HandleDoubleJump;
+        PlayerController.Instance.OnGroundPoundLand += HandleGroundPoundLand;
     }
 
     private void OnDestroy()
@@ -30,6 +33,7 @@ public class PlayerEffectsManager : MonoBehaviour
             PlayerController.Instance.OnStateChange -= HandleStateChange;
             PlayerController.Instance.OnDash -= HandleDash;
             PlayerController.Instance.OnDoubleJump -= HandleDoubleJump;
+            PlayerController.Instance.OnGroundPoundLand -= HandleGroundPoundLand;
         }
     }
 
@@ -70,6 +74,13 @@ public class PlayerEffectsManager : MonoBehaviour
         //doubleJumpVFX.Play();
         //audioSource.PlayOneShot(jumpSound);
         Debug.Log("DOUBLE JUMP");
+    }
+    
+    private void HandleGroundPoundLand()
+    {
+        Debug.Log("GROUND POUND!");
+        //groundPoundVFX.Play();
+        //audioSource.PlayOneShot(groundPoundLandSound);
     }
 
     public void PlayFootstep()
