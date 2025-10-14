@@ -27,6 +27,8 @@ public class PlayerController : MonoBehaviour
     public float airMomentumMultiplier = 0.8f;
     [Tooltip("How much control the player has to change direction mid-air. Higher is more responsive.")]
     public float airControl = 2.5f;
+    [Tooltip("Determines if the player has unlocked the ability to double jump.")]
+    public bool canDoubleJump = true;
     
     // Animations
     private Animator animator;
@@ -34,6 +36,7 @@ public class PlayerController : MonoBehaviour
     private readonly int isGroundedHash = Animator.StringToHash("IsGrounded");
     private readonly int isJumpingHash = Animator.StringToHash("IsJumping");
     private readonly int isFallingHash = Animator.StringToHash("IsFalling");
+    private readonly int doubleJumpHash = Animator.StringToHash("DoubleJump");
 
     // Components
     private CharacterController controller;
@@ -48,6 +51,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 playerVelocity;
     private Vector3 horizontalVelocity;
     private Vector2 moveInput;
+    private bool hasDoubleJumped = false; 
     
     public enum PlayerState
     {
@@ -94,11 +98,10 @@ public class PlayerController : MonoBehaviour
 
         if (isGrounded)
         {
-            if (playerVelocity.y < 0)
-            {
-                playerVelocity.y = groundedGravity;
-            }
+            hasDoubleJumped = false;
 
+            if (playerVelocity.y < 0) playerVelocity.y = groundedGravity;
+            
             bool isSprinting = sprintAction.IsPressed();
             float currentSpeed = isSprinting && moveInput.magnitude > 0.1f ? sprintSpeed : moveSpeed;
             horizontalVelocity = moveDirection * currentSpeed;
@@ -111,9 +114,14 @@ public class PlayerController : MonoBehaviour
         }
         else 
         {
-            Vector3 targetAirVelocity = moveDirection * moveSpeed;
-            
+            if (jumpAction.triggered && canDoubleJump && !hasDoubleJumped)
+            {
+                hasDoubleJumped = true; // Use up the double jump
+                playerVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity); // Apply jump force
+                animator.SetTrigger(doubleJumpHash); // Trigger the animation
+            }
 
+            Vector3 targetAirVelocity = moveDirection * moveSpeed;
             horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetAirVelocity, airControl * Time.deltaTime);
         }
         
@@ -132,8 +140,8 @@ public class PlayerController : MonoBehaviour
             playerVelocity.y = -1f;
         }
 
-        HandleAnimation(isGrounded);
         UpdateStateEnum(isGrounded, sprintAction.IsPressed());
+        HandleAnimation(isGrounded);
     }
 
     private Vector3 GetCameraRelativeMovement()
