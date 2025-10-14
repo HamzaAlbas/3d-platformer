@@ -348,7 +348,7 @@ MonoBehaviour:
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
   m_RenderPostProcessing: 1
-  m_Antialiasing: 0
+  m_Antialiasing: 2
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0
@@ -381,7 +381,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   target: {fileID: 846024198570994664}
-  distance: 5
+  distance: 4
   cameraHeight: 1.7
   sensitivity: 100
   positionSmoothTime: 0.001
@@ -1791,6 +1791,11 @@ MonoBehaviour:
   groundedGravity: -2
   airMomentumMultiplier: 0.7
   airControl: 10
+  canDoubleJump: 1
+  canDash: 1
+  dashPower: 20
+  dashDuration: 0.2
+  dashCooldown: 1
   currentState: 0
 --- !u!114 &846024198570994669
 MonoBehaviour:

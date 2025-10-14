@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -27,8 +28,16 @@ public class PlayerController : MonoBehaviour
     public float airMomentumMultiplier = 0.8f;
     [Tooltip("How much control the player has to change direction mid-air. Higher is more responsive.")]
     public float airControl = 2.5f;
+
+    
+    [Header("Skill Settings")]
     [Tooltip("Determines if the player has unlocked the ability to double jump.")]
     public bool canDoubleJump = true;
+    [Tooltip("Determines if the player has unlocked the ability to dash.")]
+    public bool canDash = true; 
+    public float dashPower = 20f; 
+    public float dashDuration = 0.2f; 
+    public float dashCooldown = 1f;
     
     // Animations
     private Animator animator;
@@ -37,21 +46,23 @@ public class PlayerController : MonoBehaviour
     private readonly int isJumpingHash = Animator.StringToHash("IsJumping");
     private readonly int isFallingHash = Animator.StringToHash("IsFalling");
     private readonly int doubleJumpHash = Animator.StringToHash("DoubleJump");
+    private readonly int dashHash = Animator.StringToHash("Dash");
 
-    // Components
+    // Components & Input
     private CharacterController controller;
     private PlayerInput playerInput;
-
-    // Input Actions
     private InputAction moveAction;
     private InputAction jumpAction;
     private InputAction sprintAction;
+    private InputAction dashAction;
 
     // State & Movement 
     private Vector3 playerVelocity;
     private Vector3 horizontalVelocity;
     private Vector2 moveInput;
     private bool hasDoubleJumped = false; 
+    private bool isDashing = false;
+    private float dashCooldownTimer = 0f;
     
     public enum PlayerState
     {
@@ -59,7 +70,8 @@ public class PlayerController : MonoBehaviour
         Moving,
         Sprinting,
         Jumping,
-        Falling
+        Falling,
+        Dashing
     }
 
     [Header("Debug")]
@@ -74,6 +86,7 @@ public class PlayerController : MonoBehaviour
         moveAction = playerInput.actions["Move"];
         sprintAction = playerInput.actions["Sprint"];
         jumpAction = playerInput.actions["Jump"];
+        dashAction = playerInput.actions["Dash"];
     }
 
     private void OnEnable()
@@ -81,6 +94,7 @@ public class PlayerController : MonoBehaviour
         moveAction.Enable();
         sprintAction.Enable();
         jumpAction.Enable();
+        dashAction.Enable();
     }
 
     private void OnDisable()
@@ -88,44 +102,60 @@ public class PlayerController : MonoBehaviour
         moveAction.Disable();
         sprintAction.Disable();
         jumpAction.Disable();
+        dashAction.Disable();
     }
 
-    private void Update()
+private void Update()
     {
         bool isGrounded = controller.isGrounded;
         moveInput = moveAction.ReadValue<Vector2>();
         Vector3 moveDirection = GetCameraRelativeMovement();
 
-        if (isGrounded)
+        if (dashCooldownTimer > 0)
         {
-            hasDoubleJumped = false;
-
-            if (playerVelocity.y < 0) playerVelocity.y = groundedGravity;
-            
-            bool isSprinting = sprintAction.IsPressed();
-            float currentSpeed = isSprinting && moveInput.magnitude > 0.1f ? sprintSpeed : moveSpeed;
-            horizontalVelocity = moveDirection * currentSpeed;
-
-            if (jumpAction.triggered)
-            {
-                playerVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-                horizontalVelocity *= airMomentumMultiplier;
-            }
+            dashCooldownTimer -= Time.deltaTime;
         }
-        else 
-        {
-            if (jumpAction.triggered && canDoubleJump && !hasDoubleJumped)
-            {
-                hasDoubleJumped = true; // Use up the double jump
-                playerVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity); // Apply jump force
-                animator.SetTrigger(doubleJumpHash); // Trigger the animation
-            }
 
-            Vector3 targetAirVelocity = moveDirection * moveSpeed;
-            horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetAirVelocity, airControl * Time.deltaTime);
+        if (dashAction.triggered && canDash && dashCooldownTimer <= 0)
+        {
+            StartCoroutine(PerformDash(moveDirection));
         }
         
-        playerVelocity.y += gravity * Time.deltaTime;
+        if (!isDashing)
+        {
+            if (isGrounded)
+            {
+                hasDoubleJumped = false;
+                if (playerVelocity.y < 0) playerVelocity.y = groundedGravity;
+                
+                bool isSprinting = sprintAction.IsPressed();
+                float currentSpeed = isSprinting && moveInput.magnitude > 0.1f ? sprintSpeed : moveSpeed;
+                horizontalVelocity = moveDirection * currentSpeed;
+
+                if (jumpAction.triggered)
+                {
+                    playerVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                    horizontalVelocity *= airMomentumMultiplier;
+                }
+            }
+            else
+            {
+                if (jumpAction.triggered && canDoubleJump && !hasDoubleJumped)
+                {
+                    hasDoubleJumped = true;
+                    playerVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                    animator.SetTrigger(doubleJumpHash);
+                }
+
+                Vector3 targetAirVelocity = moveDirection * moveSpeed;
+                horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetAirVelocity, airControl * Time.deltaTime);
+            }
+        }
+        
+        if (!isDashing)
+        {
+            playerVelocity.y += gravity * Time.deltaTime;
+        }
 
         if (moveInput.magnitude >= 0.1f)
         {
@@ -133,16 +163,36 @@ public class PlayerController : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSmoothing * Time.deltaTime);
         }
         
-        CollisionFlags flags = controller.Move((horizontalVelocity + playerVelocity) * Time.deltaTime);
-
-        if ((flags & CollisionFlags.Above) != 0 && playerVelocity.y > 0)
-        {
-            playerVelocity.y = -1f;
-        }
+        controller.Move((horizontalVelocity + playerVelocity) * Time.deltaTime);
 
         UpdateStateEnum(isGrounded, sprintAction.IsPressed());
-        HandleAnimation(isGrounded);
+        HandleAnimation();
     }
+    
+    private IEnumerator PerformDash(Vector3 moveDirection)
+    {
+        isDashing = true;
+        dashCooldownTimer = dashCooldown;
+        animator.SetTrigger(dashHash);
+
+        Vector3 dashDirection = moveDirection != Vector3.zero ? moveDirection : transform.forward;
+    
+        float originalYVelocity = playerVelocity.y;
+        playerVelocity.y = 0;
+
+        horizontalVelocity = dashDirection * dashPower;
+
+        yield return new WaitForSeconds(dashDuration);
+    
+        isDashing = false;
+        playerVelocity.y = originalYVelocity; 
+
+        Vector3 moveDirectionAfterDash = GetCameraRelativeMovement();
+        bool isSprintingAfterDash = sprintAction.IsPressed();
+        float speedAfterDash = isSprintingAfterDash && moveInput.magnitude > 0.1f ? sprintSpeed : moveSpeed;
+        horizontalVelocity = moveDirectionAfterDash * speedAfterDash;
+    }
+
 
     private Vector3 GetCameraRelativeMovement()
     {
@@ -164,16 +214,18 @@ public class PlayerController : MonoBehaviour
 
     private void UpdateStateEnum(bool isGrounded, bool isSprinting)
     {
+        if (isDashing)
+        {
+            currentState = PlayerState.Dashing;
+            return;
+        }
+
         if (isGrounded)
         {
             if (moveInput.magnitude >= 0.1f)
-            {
                 currentState = isSprinting ? PlayerState.Sprinting : PlayerState.Moving;
-            }
             else
-            {
                 currentState = PlayerState.Idle;
-            }
         }
         else
         {
@@ -181,12 +233,12 @@ public class PlayerController : MonoBehaviour
         }
     }
     
-    private void HandleAnimation(bool isGrounded)
+    private void HandleAnimation()
     {
         float horizontalSpeed = new Vector2(horizontalVelocity.x, horizontalVelocity.z).magnitude;
         
         animator.SetFloat(speedHash, horizontalSpeed);
-        animator.SetBool(isGroundedHash, isGrounded);
+        animator.SetBool(isGroundedHash, controller.isGrounded);
         animator.SetBool(isJumpingHash, currentState == PlayerState.Jumping);
         animator.SetBool(isFallingHash, currentState == PlayerState.Falling);
     }
