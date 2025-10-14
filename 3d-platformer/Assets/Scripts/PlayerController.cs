@@ -31,6 +31,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float groundedGravity = -2f;
     [SerializeField, Range(0f, 2f)] private float airMomentumMultiplier = 0.8f;
     [SerializeField] private float airControl = 2.5f;
+    [SerializeField] private float ledgeClimbDuration = 0.5f;
 
     [Header("Skill Settings")]
     [SerializeField] private bool canDoubleJump = true;
@@ -53,8 +54,10 @@ public class PlayerController : MonoBehaviour
     private Vector2 moveInput;
     private bool hasDoubleJumped, isDashing, isGroundPounding, hasLandedFromPound;
     private float dashCooldownTimer;
+    private bool isLedgeClimbing = false;
     
-    public enum PlayerState { Idle, Moving, Sprinting, Jumping, Falling, Dashing, GroundPounding }
+    
+    public enum PlayerState { Idle, Moving, Sprinting, Jumping, Falling, Dashing, GroundPounding, LedgeClimbing }
     [Header("Debug")]
     [SerializeField] private PlayerState currentState;
     private PlayerState previousState;
@@ -67,6 +70,7 @@ public class PlayerController : MonoBehaviour
     private readonly int doubleJumpHash = Animator.StringToHash("DoubleJump");
     private readonly int dashHash = Animator.StringToHash("Dash");
     private readonly int groundPoundHash = Animator.StringToHash("GroundPound");
+    private readonly int ledgeClimbHash = Animator.StringToHash("LedgeClimb");
 
     #endregion
 
@@ -109,6 +113,8 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        if (isLedgeClimbing) return;
+        
         bool isGrounded = controller.isGrounded;
         
         HandleCooldowns();
@@ -160,7 +166,7 @@ public class PlayerController : MonoBehaviour
 
     #region State & Physics
 
-    private bool IsMovementLocked() => isDashing || isGroundPounding;
+    private bool IsMovementLocked() => isDashing || isGroundPounding || isLedgeClimbing;
     
     private void HandleGroundPoundLanding(bool isGrounded)
     {
@@ -238,6 +244,7 @@ public class PlayerController : MonoBehaviour
 
     private void PerformGroundPound()
     {
+        animator.ResetTrigger(doubleJumpHash);
         isGroundPounding = true;
         hasLandedFromPound = false;
         animator.SetTrigger(groundPoundHash);
@@ -249,6 +256,7 @@ public class PlayerController : MonoBehaviour
 
     private IEnumerator PerformDash(Vector3 moveDirection)
     {
+        animator.ResetTrigger(doubleJumpHash);
         OnDash?.Invoke();
         isDashing = true;
         dashCooldownTimer = dashCooldown;
@@ -270,15 +278,79 @@ public class PlayerController : MonoBehaviour
     }
 
     #endregion
+    
+    #region Ledge Detection & Ledge Climbing
 
+     private void OnTriggerEnter(Collider other)
+    {
+        if (IsMovementLocked() || controller.isGrounded) return;
+
+        if (other.TryGetComponent<LedgeTrigger>(out LedgeTrigger ledge))
+        {
+
+            Transform ledgeTransform = ledge.transform;
+            Vector3 playerPos = transform.position;
+
+            Vector3 playerToLedgeCenter = playerPos - ledgeTransform.position;
+            float dot = Vector3.Dot(playerToLedgeCenter, ledgeTransform.right);
+
+            float ledgeWidth = ledgeTransform.localScale.x / 2f;
+            dot = Mathf.Clamp(dot, -ledgeWidth, ledgeWidth);
+
+            Vector3 closestPointOnLedge = ledgeTransform.position + ledgeTransform.right * dot;
+
+            Vector3 finalTargetPosition = closestPointOnLedge + ledgeTransform.TransformDirection(ledge.climbUpOffset);
+            
+            Quaternion finalTargetRotation = Quaternion.LookRotation(ledgeTransform.forward);
+
+            StartCoroutine(PerformLedgeClimb(finalTargetPosition, finalTargetRotation));
+        }
+    }
+
+    private IEnumerator PerformLedgeClimb(Vector3 targetPos, Quaternion targetRot)
+    {
+        animator.ResetTrigger(doubleJumpHash);
+        isLedgeClimbing = true;
+        animator.SetTrigger(ledgeClimbHash);
+
+        Vector3 startPos = transform.position;
+        float climbDuration = ledgeClimbDuration;
+        float elapsedTime = 0f;
+
+        controller.enabled = false;
+
+        while (elapsedTime < climbDuration)
+        {
+            transform.position = Vector3.Lerp(startPos, targetPos, elapsedTime / climbDuration);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, elapsedTime / climbDuration);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        transform.position = targetPos;
+        transform.rotation = targetRot;
+    }
+
+    
+    public void EndLedgeClimb()
+    {
+        isLedgeClimbing = false;
+        controller.enabled = true;
+        playerVelocity = Vector3.zero;
+        horizontalVelocity = Vector3.zero;
+        Debug.Log("Ledge climb animation finished.");
+    }
+
+    #endregion
+    
     #region Animation & State Enum
 
     private void UpdateStateAndAnimator(bool isGrounded)
     {
         // Update State Enum
         previousState = currentState;
-        if (isGroundPounding) currentState = PlayerState.GroundPounding;
-        else if (isDashing) currentState = PlayerState.Dashing;
+        if (isLedgeClimbing) currentState = PlayerState.LedgeClimbing;
+        else if (isGroundPounding) currentState = PlayerState.GroundPounding;
         else if (isGrounded)
         {
             if (moveInput.magnitude > 0.1f)
