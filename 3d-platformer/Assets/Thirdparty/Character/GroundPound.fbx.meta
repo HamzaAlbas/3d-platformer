@@ -58,7 +58,7 @@ ModelImporter:
       - time: 1
         functionName: EndGroundPound
         data: 
-        objectReferenceParameter: {fileID: 11500000, guid: 3a54e862d89956744909c60fc39bc2e3, type: 3}
+        objectReferenceParameter: {fileID: 11500000, guid: 58d8cfb0a74ad2c47b1354da9a2e7641, type: 3}
         floatParameter: 0
         intParameter: 0
         messageOptions: 0
