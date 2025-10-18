@@ -131,7 +131,7 @@ GameObject:
   - component: {fileID: 149087129}
   - component: {fileID: 149087128}
   - component: {fileID: 149087127}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cube (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -525,7 +525,7 @@ GameObject:
   - component: {fileID: 578528025}
   - component: {fileID: 578528024}
   - component: {fileID: 578528023}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cube (4)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -685,7 +685,7 @@ GameObject:
   - component: {fileID: 1033507464}
   - component: {fileID: 1033507463}
   - component: {fileID: 1033507462}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -879,7 +879,7 @@ GameObject:
   - component: {fileID: 1211022163}
   - component: {fileID: 1211022162}
   - component: {fileID: 1211022161}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cube (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -990,7 +990,7 @@ GameObject:
   - component: {fileID: 1213243398}
   - component: {fileID: 1213243397}
   - component: {fileID: 1213243396}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cube (6)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1101,7 +1101,7 @@ GameObject:
   - component: {fileID: 1387230102}
   - component: {fileID: 1387230101}
   - component: {fileID: 1387230100}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cube (5)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1243,7 +1243,7 @@ GameObject:
   - component: {fileID: 1868975695}
   - component: {fileID: 1868975694}
   - component: {fileID: 1868975693}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cube (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1354,7 +1354,7 @@ GameObject:
   - component: {fileID: 1910127073}
   - component: {fileID: 1910127072}
   - component: {fileID: 1910127071}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Ground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1858,7 +1858,7 @@ Transform:
   m_GameObject: {fileID: 69381563821142354}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0.607, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2061,7 +2061,7 @@ MonoBehaviour:
   cameraTransform: {fileID: 330585546}
   rotationSmoothing: 15
   gravity: -20
-  groundedGravity: -2
+  groundedGravity: -5
 --- !u!4 &850524307816471096
 Transform:
   m_ObjectHideFlags: 0
